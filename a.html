@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Untitled Paint</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #controls > * {
+            margin: 10px;
+        }
+
+        canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+            cursor: crosshair;
+            margin-top: 50px;
+        }
+
+        #exitButton {
+            margin-left: auto; /* يميّز الزر إلى اليمين */
+            cursor: pointer;
+            padding: 5px 10px;
+            background-color: #ff0000;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <input type="color" id="colorPicker" value="#000000">
+        <label for="brushSize">Brush Size: </label>
+        <input type="range" id="brushSize" min="1" max="20" value="5">
+        <button id="saveButton">Save Image</button>
+        <button id="pencilButton">Pencil</button>
+        <button id="eraserButton">Eraser</button>
+        <button id="rectangleButton">Rectangle</button>
+        <button id="circleButton">Circle</button>
+        <button id="triangleButton">Triangle</button>
+        <button id="lineButton">Line</button>
+        <div id="exitButton">X</div>
+    </div>
+    <canvas id="paintCanvas" width="800" height="600"></canvas>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const canvas = document.getElementById("paintCanvas");
+            const context = canvas.getContext("2d");
+            const colorPicker = document.getElementById("colorPicker");
+            const brushSize = document.getElementById("brushSize");
+            const saveButton = document.getElementById("saveButton");
+            const pencilButton = document.getElementById("pencilButton");
+            const eraserButton = document.getElementById("eraserButton");
+            const rectangleButton = document.getElementById("rectangleButton");
+            const circleButton = document.getElementById("circleButton");
+            const triangleButton = document.getElementById("triangleButton");
+            const lineButton = document.getElementById("lineButton");
+
+            let painting = false;
+            let erasing = false;
+            let drawingShape = false;
+            let startX, startY;
+
+            function startPosition(e) {
+                if (drawingShape) {
+                    startX = e.clientX - canvas.offsetLeft;
+                    startY = e.clientY - canvas.offsetTop;
+                    return;
+                }
+
+                painting = true;
+                draw(e);
+            }
+
+            function endPosition() {
+                if (drawingShape) {
+                    drawingShape = false;
+                    return;
+                }
+
+                painting = false;
+                erasing = false;
+                context.beginPath();
+            }
+
+            function draw(e) {
+                if (!painting && !drawingShape) return;
+
+                context.lineWidth = brushSize.value;
+                context.lineCap = "round";
+                context.strokeStyle = erasing ? "#fff" : colorPicker.value;
+
+                if (drawingShape) {
+                    drawShape(e);
+                } else {
+                    context.lineTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+                    context.stroke();
+                    context.beginPath();
+                    context.moveTo(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop);
+                }
+            }
+
+            function drawShape(e) {
+                const endX = e.clientX - canvas.offsetLeft;
+                const endY = e.clientY - canvas.offsetTop;
+
+                if (rectangleButton.classList.contains("active")) {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.beginPath();
+                    context.rect(startX, startY, endX - startX, endY - startY);
+                    context.stroke();
+                } else if (circleButton.classList.contains("active")) {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.beginPath();
+                    const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+                    context.arc(startX, startY, radius, 0, 2 * Math.PI);
+                    context.stroke();
+                } else if (triangleButton.classList.contains("active")) {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.beginPath();
+                    context.moveTo(startX + (endX - startX) / 2, startY);
+                    context.lineTo(endX, endY);
+                    context.lineTo(startX, endY);
+                    context.closePath();
+                    context.stroke();
+                } else if (lineButton.classList.contains("active")) {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.beginPath();
+                    context.moveTo(startX, startY);
+                    context.lineTo(endX, endY);
+                    context.stroke();
+                }
+            }
+
+            function saveImage() {
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = 'untitled_paint.png';
+                link.click();
+            }
+
+            function setActiveButton(button) {
+                const buttons = [pencilButton, eraserButton, rectangleButton, circleButton, triangleButton, lineButton];
+                buttons.forEach(btn => btn.classList.remove("active"));
+                button.classList.add("active");
+            }
+
+            canvas.addEventListener("mousedown", startPosition);
+            canvas.addEventListener("mouseup", endPosition);
+            canvas.addEventListener("mousemove", draw);
+
+            saveButton.addEventListener("click", saveImage);
+
+            pencilButton.addEventListener("click", () => {
+                setActiveButton(pencilButton);
+                erasing = false;
+                drawingShape = false;
+            });
+
+            eraserButton.addEventListener("click", () => {
+                setActiveButton(eraserButton);
+                erasing = true;
+                drawingShape = false;
+            });
+
+            rectangleButton.addEventListener("click", () => {
+                setActiveButton(rectangleButton);
+                drawingShape = true;
+            });
+
+            circleButton.addEventListener("click", () => {
+                setActiveButton(circleButton);
+                drawingShape = true;
+            });
+
+            triangleButton.addEventListener("click", () => {
+                setActiveButton(triangleButton);
+                drawingShape = true;
+            });
+
+            lineButton.addEventListener("click", () => {
+                setActiveButton(lineButton);
+                drawingShape = true;
+            });
+
+            const exitButton = document.getElementById("exitButton");
+            exitButton.addEventListener("click", function() {
+                window.close();
+            });
+        });
+    </script>
+</body>
+</html>
